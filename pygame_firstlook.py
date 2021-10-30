@@ -1,4 +1,7 @@
 import pygame
+import pickle
+from os import path
+
 from pygame import image
 from pygame.event import pump
 from pygame.locals import *
@@ -10,14 +13,17 @@ fps = 60
 
 screen_width = 1000
 screen_height = 1000
-game_over = 0
-main_menu = True
+
 
 screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption('Platformer')
 
 #define game variables
 tile_size = 50
+game_over = 0
+main_menu = True
+level = 0
+max_levels = 7
 
 #load images
 sun_img = pygame.image.load('img/sun.png')
@@ -25,6 +31,19 @@ bg_img = pygame.image.load('img/sky.png')
 restart_image = pygame.image.load('img/restart_btn.png')
 start_image = pygame.image.load('img/start_btn.png')
 exit_image = pygame.image.load('img/exit_btn.png')
+
+#functies
+
+def reset_level(level):
+    player.reset(100,screen_height - 130)
+    sprite_group.empty()
+    exit_group.empty()
+    #het inladen van de data (dynamisch)
+    if path.exists(f'level{level}_data'):
+        pickle_in = open(f'level{level}_data', 'rb')
+        world_data = pickle.load(pickle_in)
+        world = World(world_data)
+    return world
 
 # Class definen
 ## ___init___ => is de constructur v/d classe
@@ -58,7 +77,7 @@ class Player():
     def __init__(self, x, y):
         self.reset(x, y)
 
-    def update(self, game_over):
+    def update(self, game_over, level):
         walk_cooldown = 7
         dx = 0
         dy = 0
@@ -133,7 +152,12 @@ class Player():
 
             #controle voor botsting met enemies
             if pygame.sprite.spritecollide(self, sprite_group, False):
-                game_over = -1
+                game_over = -1 #DEAD
+
+            #controle voor het deurtje naar volgende level
+            if pygame.sprite.spritecollide(self, exit_group, False):
+                game_over = 1 #NEXT LEVEL
+
 
             self.rect.x += dx
             self.rect.y += dy
@@ -188,6 +212,14 @@ class Enemy(pygame.sprite.Sprite):
             self.move_direction *= -1
             self.move_counter = 0
 
+class Exit(pygame.sprite.Sprite):
+     def __init__(self,x, y):
+        pygame.sprite.Sprite.__init__(self)
+        img = pygame.image.load('img/exit.png')
+        self.image = pygame.transform.scale(img, (tile_size,tile_size * 1.5))
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y 
 
 class Lava(pygame.sprite.Sprite):
      def __init__(self,x, y):
@@ -230,6 +262,10 @@ class World():
                 if tile == 6:
                     lava = Lava(col_count * tile_size, row_count * tile_size + 25)
                     sprite_group.add(lava)
+                if tile == 8:
+                    exit = Exit(col_count * tile_size, row_count * tile_size - 20)
+                    exit_group.add(exit)
+
                 col_count += 1
             row_count += 1
 
@@ -238,33 +274,12 @@ class World():
             screen.blit(tile[0], tile[1])
             pygame.draw.rect(screen, (255,255,255), tile[1], 2)
 
-world_data = [
-[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 
-[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
-[1, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 1], 
-[1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 2, 2, 1], 
-[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 7, 0, 5, 0, 0, 0, 1], 
-[1, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 1], 
-[1, 7, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
-[1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
-[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 7, 0, 0, 0, 0, 1], 
-[1, 0, 2, 0, 0, 7, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
-[1, 0, 0, 2, 0, 0, 4, 0, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 1], 
-[1, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 1], 
-[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
-[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 7, 0, 0, 0, 0, 2, 0, 1], 
-[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
-[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 2, 2, 2, 2, 2, 1], 
-[1, 0, 0, 0, 0, 0, 2, 2, 2, 6, 6, 6, 6, 6, 1, 1, 1, 1, 1, 1], 
-[1, 0, 0, 0, 0, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 
-[1, 0, 0, 0, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 
-[1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-]
-
-
 player = Player(100, screen_height - 130)
 sprite_group = pygame.sprite.Group()
-world = World(world_data)
+exit_group = pygame.sprite.Group()
+
+
+
 restart_button = Button(screen_width // 2 - 50, screen_height // 2 - 15, restart_image)
 start_button = Button(screen_width // 2 - 350, screen_height // 2, start_image)
 exit_button = Button(screen_width // 2 + 150, screen_height // 2, exit_image)
@@ -272,6 +287,9 @@ exit_button = Button(screen_width // 2 + 150, screen_height // 2, exit_image)
 import sqlconnection
 
 sqlconnection.printScoreboard()
+
+world = reset_level(level)
+
 
     
 run = True
@@ -291,13 +309,35 @@ while run:
             sprite_group.update()
 
         sprite_group.draw(screen)
-        
-        game_over = player.update(game_over)
+        exit_group.draw(screen)
+
+        game_over = player.update(game_over, level)
 
         if game_over == -1:
             if restart_button.draw(): #tekent EN return de actie van de button (clicked of niet)
-                player.reset(100, screen_height - 130)
+                world_data = []
+                world = reset_level(level)
                 game_over = 0
+
+        if game_over == 1:       
+            level += 1
+            if level <= max_levels:
+                #reset het level
+                world_data = []
+                world = reset_level(level)
+                game_over = 0
+            else:
+                #einde van het spel, boven level 7
+                #toon restart button
+                if restart_button.draw(): #tekent EN return de actie van de button (clicked of niet)
+                    level = 0
+                    world_data = []
+                    world = reset_level(level)
+                    game_over = 0
+
+
+
+
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
