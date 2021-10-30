@@ -1,5 +1,6 @@
 import pygame
 from pygame import image
+from pygame.event import pump
 from pygame.locals import *
 
 pygame.init()
@@ -20,45 +21,50 @@ tile_size = 50
 #load images
 sun_img = pygame.image.load('img/sun.png')
 bg_img = pygame.image.load('img/sky.png')
+restart_image = pygame.image.load('img/restart_btn.png')
 
 # Class definen
 ## ___init___ => is de constructur v/d classe
 # door self.xxx te gebruiker en toe te wijzen wordt er automatisch ook een variabele aangemaakt
-
-class Player():
-    def __init__(self, x, y):
-        self.images_right = []
-        self.images_left = []
-        self.image_index = 0
-        self.counter = 0
-        
-        for num in range(1,5):
-            img_right = pygame.image.load(f'img/guy{num}.png')
-            img_right  = pygame.transform.scale(img_right, (40,80))
-            img_left = pygame.transform.flip(img_right, True, False)
-            self.images_right.append(img_right)
-            self.images_left.append(img_left)
-
-        self.image = self.images_right[self.image_index]
+class Button():
+    def __init__(self, x, y, image):
+        self.image = image
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
-        self.width = self.image.get_width()
-        self.height = self.image.get_height()
-        self.vel_y = 0
-        self.jumped = False
-        self.direction = 0
-        self.dead_image = pygame.image.load('img/ghost.png')
+        self.clicked = False
+    def draw(self):
+        action = False
+        #krijg muis positie
+        pos = pygame.mouse.get_pos()
+
+        #check muispunt collsion
+        if self.rect.collidepoint(pos):
+            if pygame.mouse.get_pressed()[0] == 1 and self.clicked == False: #linker muisknop INGEDRUKT
+                action = True
+                self.clicked = True
+
+        if pygame.mouse.get_pressed()[0] == 0: #linker muisknop LOSGELATEN
+            self.clicked = False
+
+        #de button zelf plaatsen
+        screen.blit(self.image, self.rect)
+        return action
+
+class Player():
+    def __init__(self, x, y):
+        self.reset(x, y)
 
     def update(self, game_over):
+        walk_cooldown = 7
+        dx = 0
+        dy = 0
         if game_over == 0:
-            walk_cooldown = 7
-            dx = 0
-            dy = 0
+            
 
             #reageer op de key presses
             key = pygame.key.get_pressed()
-            if key[pygame.K_SPACE] == True and self.jumped == False: 
+            if key[pygame.K_SPACE] == True and self.jumped == False and self.is_on_platform == False: 
                 self.vel_y = -15
                 self.jumped = True
             if key[pygame.K_SPACE] == False:
@@ -100,6 +106,9 @@ class Player():
             #bereken nieuwe positie
     
             #kijk of hij ergens tegen zou botsen (indien niet, ga verder, anders beweeg je niet.)
+            self.is_on_platform = True 
+
+
             #update de player zijn coordinaten indien verder gaan
             for tile in world.tile_list:
                 #controleer y direction
@@ -117,6 +126,7 @@ class Player():
                     elif self.vel_y >= 0:
                         dy = tile[1].top - self.rect.bottom
                         self.vel_y = 0
+                        self.is_on_platform = False
 
             #controle voor botsting met enemies
             if pygame.sprite.spritecollide(self, sprite_group, False):
@@ -124,16 +134,40 @@ class Player():
 
             self.rect.x += dx
             self.rect.y += dy
+
         elif game_over == -1:
                 self.image = self.dead_image
                 if self.rect.y > 200:
                     self.rect.y -= 5
-                print(f"gameover!")
 
         #teken de effectieve player op het scherm
         screen.blit(self.image, self.rect)
         return game_over
+    def reset(self, x, y):
+        self.images_right = []
+        self.images_left = []
+        self.image_index = 0
+        self.counter = 0
         
+        for num in range(1,5):
+            img_right = pygame.image.load(f'img/guy{num}.png')
+            img_right  = pygame.transform.scale(img_right, (40,80))
+            img_left = pygame.transform.flip(img_right, True, False)
+            self.images_right.append(img_right)
+            self.images_left.append(img_left)
+
+        self.image = self.images_right[self.image_index]
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.width = self.image.get_width()
+        self.height = self.image.get_height()
+        self.vel_y = 0
+        self.jumped = False
+        self.direction = 0
+        self.dead_image = pygame.image.load('img/ghost.png')
+        self.is_on_platform = True
+
 class Enemy(pygame.sprite.Sprite):
     def __init__(self,x, y):
         pygame.sprite.Sprite.__init__(self)
@@ -228,6 +262,7 @@ world_data = [
 player = Player(100, screen_height - 130)
 sprite_group = pygame.sprite.Group()
 world = World(world_data)
+restart_button = Button(screen_width // 2 - 50, screen_height // 2 - 15, restart_image)
 
 #import database connection file (objecten etc)
 import sqlconnection
@@ -241,13 +276,19 @@ while run:
 
     screen.blit(bg_img, (0, 0))
     screen.blit(sun_img, (100, 100))
-
+    
     world.draw()
     if game_over == 0:
         sprite_group.update()
+
     sprite_group.draw(screen)
      
     game_over = player.update(game_over)
+
+    if game_over == -1:
+      if restart_button.draw(): #tekent EN return de actie van de button (clicked of niet)
+        player.reset(100, screen_height - 130)
+        game_over = 0
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
