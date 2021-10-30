@@ -16,13 +16,29 @@ tile_size = 50
 sun_img = pygame.image.load('img/sun.png')
 bg_img = pygame.image.load('img/sky.png')
 
+#manier om functies te definen
 def draw_grid():
     for line in range(0, 20):
         pygame.draw.line(screen, (255, 255, 255), (0, line * tile_size), (screen_width, line * tile_size))
         pygame.draw.line(screen, (255, 255, 255), (line * tile_size, 0), (line * tile_size, screen_height))
 
+# Class definen
+## ___init___ => is de constructur v/d classe
+# door self.xxx te gebruiker en toe te wijzen wordt er automatisch ook een variabele aangemaakt
+
+class Player():
+    def __init__(self, x, y):
+        img = pygame.image.load('img/guy1.png')
+        self.image = pygame.transform.scale(img, (40,80)) #scale the image of the player
+        self.rect = self.image.get_rect() # creeërt een rechthoek op basis van de afmetingen te gebruiken als fysiek object
+        self.rect.x = x # op basis van x & y
+        self.rect.y = y
+    def update(self):
+        #teken de effectieve player op het scherm
+        screen.blit(self.image, self.rect)
+
 class World():
-    def __init__(self, data):
+    def __init__(self, data): 
         self.tile_list = []
 
         #load images
@@ -77,6 +93,8 @@ world_data = [
 [1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 ]
 
+
+player = Player(100, screen_height - 130)
 world = World(world_data)
 
 run = True
@@ -86,6 +104,7 @@ while run:
     screen.blit(sun_img, (100, 100))
 
     world.draw()
+    player.update()
 
     draw_grid()
 
