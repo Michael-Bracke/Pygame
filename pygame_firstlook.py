@@ -16,12 +16,6 @@ tile_size = 50
 sun_img = pygame.image.load('img/sun.png')
 bg_img = pygame.image.load('img/sky.png')
 
-#manier om functies te definen
-def draw_grid():
-    for line in range(0, 20):
-        pygame.draw.line(screen, (255, 255, 255), (0, line * tile_size), (screen_width, line * tile_size))
-        pygame.draw.line(screen, (255, 255, 255), (line * tile_size, 0), (line * tile_size, screen_height))
-
 # Class definen
 ## ___init___ => is de constructur v/d classe
 # door self.xxx te gebruiker en toe te wijzen wordt er automatisch ook een variabele aangemaakt
@@ -30,13 +24,49 @@ class Player():
     def __init__(self, x, y):
         img = pygame.image.load('img/guy1.png')
         self.image = pygame.transform.scale(img, (40,80)) #scale the image of the player
-        self.rect = self.image.get_rect() # creeërt een rechthoek op basis van de afmetingen te gebruiken als fysiek object
-        self.rect.x = x # op basis van x & y
+        self.rect = self.image.get_rect()
+        self.rect.x = x
         self.rect.y = y
+        self.vel_y = 0
+        self.jumped = False
+
     def update(self):
+
+        dx = 0
+        dy = 0
+
+        #reageer op de key presses
+        key = pygame.key.get_pressed()
+        if key[pygame.K_SPACE] == True and self.jumped == False: 
+            self.vel_y = -15
+            self.jumped = True
+        if key[pygame.K_SPACE] == False:
+            self.jumped = False
+        if key[pygame.K_LEFT] == True : 
+            dx -= 5
+        if key[pygame.K_RIGHT] == True : 
+            dx += 5
+       
+        #voeg zwaartekracht toe
+        self.vel_y += 1
+        if self.vel_y > 10:
+            self.vel_y = 10
+        dy += self.vel_y
+        #bereken nieuwe positie
+ 
+        #kijk of hij ergens tegen zou botsen (indien niet, ga verder, anders beweeg je niet.)
+        #update de player zijn coordinaten indien verder gaan
+
+        self.rect.x += dx
+        self.rect.y += dy
+
+        if self.rect.bottom > screen_height:
+            self.rect.bottom = screen_height
+            dy = 0
+
         #teken de effectieve player op het scherm
         screen.blit(self.image, self.rect)
-
+    
 class World():
     def __init__(self, data): 
         self.tile_list = []
@@ -105,8 +135,6 @@ while run:
 
     world.draw()
     player.update()
-
-    draw_grid()
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
