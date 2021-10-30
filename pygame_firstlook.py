@@ -9,6 +9,7 @@ fps = 60
 
 screen_width = 1000
 screen_height = 1000
+game_over = 0
 
 screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption('Platformer')
@@ -47,84 +48,91 @@ class Player():
         self.vel_y = 0
         self.jumped = False
         self.direction = 0
+        self.dead_image = pygame.image.load('img/ghost.png')
 
-    def update(self):
-        walk_cooldown = 7
-        dx = 0
-        dy = 0
-
-        #reageer op de key presses
-        key = pygame.key.get_pressed()
-        if key[pygame.K_SPACE] == True and self.jumped == False: 
-            self.vel_y = -15
-            self.jumped = True
-        if key[pygame.K_SPACE] == False:
-            self.jumped = False
-        if key[pygame.K_LEFT] == True : 
-            dx -= 5
-            self.counter += 1
-            self.direction = -1
-        if key[pygame.K_RIGHT] == True : 
-            dx += 5
-            self.counter += 1
-            self.direction = 1
-        #counter reset
-        if key[pygame.K_LEFT] == False and key[pygame.K_RIGHT] == False:
-            self.counter = 0
-            self.image_index = 0
-            if self.direction == 1:         
-                self.image = self.images_right[self.image_index]
-            if self.direction == -1:   
-                self.image = self.images_left[self.image_index]
-        #de animatie 
-        
-        if self.counter > walk_cooldown:
-            self.counter = 0
-            self.image_index += 1
-            if self.image_index >= len(self.images_right):
-                self.image_index = 0  
-            if self.direction == 1:         
-                self.image = self.images_right[self.image_index]
-            if self.direction == -1:   
-                self.image = self.images_left[self.image_index]
-
-        #voeg zwaartekracht toe
-        self.vel_y += 1
-        if self.vel_y > 10:
-            self.vel_y = 10
-        dy += self.vel_y
-
-        #bereken nieuwe positie
- 
-        #kijk of hij ergens tegen zou botsen (indien niet, ga verder, anders beweeg je niet.)
-        #update de player zijn coordinaten indien verder gaan
-        for tile in world.tile_list:
-            #controleer y direction
-            #door gebruik te maken van dx en dy, creer je eerst eigenlijk een 'temp' rectangle
-            #check for collision in x direction
-            if tile[1].colliderect(self.rect.x + dx, self.rect.y, self.width, self.height):
-                dx = 0
-            #als deze temp rectangle een botsing maakt, mag je dus niet verder
-            if tile[1].colliderect(self.rect.x, self.rect.y + dy, self.width, self.height):
-                #controleer of onder de grond (jumping)
-                if self.vel_y < 0:
-                    dy = tile[1].bottom - self.rect.top
-                    self.vel_y = 0
-                #controleer of boven de grond (falling)
-                elif self.vel_y >= 0:
-                    dy = tile[1].top - self.rect.bottom
-                    self.vel_y = 0
-         
-
-        self.rect.x += dx
-        self.rect.y += dy
-
-        if self.rect.bottom > screen_height:
-            self.rect.bottom = screen_height
+    def update(self, game_over):
+        if game_over == 0:
+            walk_cooldown = 7
+            dx = 0
             dy = 0
+
+            #reageer op de key presses
+            key = pygame.key.get_pressed()
+            if key[pygame.K_SPACE] == True and self.jumped == False: 
+                self.vel_y = -15
+                self.jumped = True
+            if key[pygame.K_SPACE] == False:
+                self.jumped = False
+            if key[pygame.K_LEFT] == True : 
+                dx -= 5
+                self.counter += 1
+                self.direction = -1
+            if key[pygame.K_RIGHT] == True : 
+                dx += 5
+                self.counter += 1
+                self.direction = 1
+            #counter reset
+            if key[pygame.K_LEFT] == False and key[pygame.K_RIGHT] == False:
+                self.counter = 0
+                self.image_index = 0
+                if self.direction == 1:         
+                    self.image = self.images_right[self.image_index]
+                if self.direction == -1:   
+                    self.image = self.images_left[self.image_index]
+            #de animatie 
+            
+            if self.counter > walk_cooldown:
+                self.counter = 0
+                self.image_index += 1
+                if self.image_index >= len(self.images_right):
+                    self.image_index = 0  
+                if self.direction == 1:         
+                    self.image = self.images_right[self.image_index]
+                if self.direction == -1:   
+                    self.image = self.images_left[self.image_index]
+
+            #voeg zwaartekracht toe
+            self.vel_y += 1
+            if self.vel_y > 10:
+                self.vel_y = 10
+            dy += self.vel_y
+
+            #bereken nieuwe positie
+    
+            #kijk of hij ergens tegen zou botsen (indien niet, ga verder, anders beweeg je niet.)
+            #update de player zijn coordinaten indien verder gaan
+            for tile in world.tile_list:
+                #controleer y direction
+                #door gebruik te maken van dx en dy, creer je eerst eigenlijk een 'temp' rectangle
+                #check for collision in x direction
+                if tile[1].colliderect(self.rect.x + dx, self.rect.y, self.width, self.height):
+                    dx = 0
+                #als deze temp rectangle een botsing maakt, mag je dus niet verder
+                if tile[1].colliderect(self.rect.x, self.rect.y + dy, self.width, self.height):
+                    #controleer of onder de grond (jumping)
+                    if self.vel_y < 0:
+                        dy = tile[1].bottom - self.rect.top
+                        self.vel_y = 0
+                    #controleer of boven de grond (falling)
+                    elif self.vel_y >= 0:
+                        dy = tile[1].top - self.rect.bottom
+                        self.vel_y = 0
+
+            #controle voor botsting met enemies
+            if pygame.sprite.spritecollide(self, sprite_group, False):
+                game_over = -1
+
+            self.rect.x += dx
+            self.rect.y += dy
+        elif game_over == -1:
+                self.image = self.dead_image
+                if self.rect.y > 200:
+                    self.rect.y -= 5
+                print(f"gameover!")
 
         #teken de effectieve player op het scherm
         screen.blit(self.image, self.rect)
+        return game_over
         
 class Enemy(pygame.sprite.Sprite):
     def __init__(self,x, y):
@@ -235,10 +243,12 @@ while run:
     screen.blit(sun_img, (100, 100))
 
     world.draw()
-    sprite_group.update()
+    if game_over == 0:
+        sprite_group.update()
     sprite_group.draw(screen)
      
-    player.update()
+    game_over = player.update(game_over)
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
