@@ -187,6 +187,10 @@ world_data = [
 player = Player(100, screen_height - 130)
 world = World(world_data)
 
+#import database connection file (objecten etc)
+from sqlconnection import *  
+
+    
 run = True
 while run:
     clock.tick(fps)
