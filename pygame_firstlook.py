@@ -3,6 +3,9 @@ from pygame.locals import *
 
 pygame.init()
 
+clock = pygame.time.Clock()
+fps = 60
+
 screen_width = 1000
 screen_height = 1000
 
@@ -22,8 +25,15 @@ bg_img = pygame.image.load('img/sky.png')
 
 class Player():
     def __init__(self, x, y):
-        img = pygame.image.load('img/guy1.png')
-        self.image = pygame.transform.scale(img, (40,80)) #scale the image of the player
+        self.images_right = []
+        self.image_index = 0
+        self.counter = 0
+        
+        for num in range(1,5):
+            img_right = pygame.image.load(f'img/guy{num}.png')
+            img_right  = pygame.transform.scale(img_right, (40,80))
+            self.images_right.append(img_right)
+        self.image = self.images_right[self.image_index]
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
@@ -31,7 +41,7 @@ class Player():
         self.jumped = False
 
     def update(self):
-
+        walk_cooldown = 7
         dx = 0
         dy = 0
 
@@ -44,9 +54,24 @@ class Player():
             self.jumped = False
         if key[pygame.K_LEFT] == True : 
             dx -= 5
+            self.counter += 1
         if key[pygame.K_RIGHT] == True : 
             dx += 5
-       
+            self.counter += 1
+        #counter reset
+        if key[pygame.K_LEFT] == False and key[pygame.K_RIGHT] == False:
+            self.counter = 0
+            self.image_index = 0
+            
+        #de animatie 
+        
+        if self.counter > walk_cooldown:
+            self.counter = 0
+            self.image_index += 1
+            if self.image_index >= len(self.images_right):
+                self.image_index = 0
+            
+        self.image = self.images_right[self.image_index]
         #voeg zwaartekracht toe
         self.vel_y += 1
         if self.vel_y > 10:
@@ -129,6 +154,7 @@ world = World(world_data)
 
 run = True
 while run:
+    clock.tick(fps)
 
     screen.blit(bg_img, (0, 0))
     screen.blit(sun_img, (100, 100))
