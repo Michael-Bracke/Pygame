@@ -42,6 +42,8 @@ class Player():
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
+        self.width = self.image.get_width()
+        self.height = self.image.get_height()
         self.vel_y = 0
         self.jumped = False
         self.direction = 0
@@ -85,15 +87,34 @@ class Player():
                 self.image = self.images_right[self.image_index]
             if self.direction == -1:   
                 self.image = self.images_left[self.image_index]
+
         #voeg zwaartekracht toe
         self.vel_y += 1
         if self.vel_y > 10:
             self.vel_y = 10
         dy += self.vel_y
+
         #bereken nieuwe positie
  
         #kijk of hij ergens tegen zou botsen (indien niet, ga verder, anders beweeg je niet.)
         #update de player zijn coordinaten indien verder gaan
+        for tile in world.tile_list:
+            #controleer y direction
+            #door gebruik te maken van dx en dy, creer je eerst eigenlijk een 'temp' rectangle
+            #check for collision in x direction
+            if tile[1].colliderect(self.rect.x + dx, self.rect.y, self.width, self.height):
+                dx = 0
+            #als deze temp rectangle een botsing maakt, mag je dus niet verder
+            if tile[1].colliderect(self.rect.x, self.rect.y + dy, self.width, self.height):
+                #controleer of onder de grond (jumping)
+                if self.vel_y < 0:
+                    dy = tile[1].bottom - self.rect.top
+                    self.vel_y = 0
+                #controleer of boven de grond (falling)
+                elif self.vel_y >= 0:
+                    dy = tile[1].top - self.rect.bottom
+                    self.vel_y = 0
+         
 
         self.rect.x += dx
         self.rect.y += dy
@@ -104,7 +125,7 @@ class Player():
 
         #teken de effectieve player op het scherm
         screen.blit(self.image, self.rect)
-    
+        
 class World():
     def __init__(self, data): 
         self.tile_list = []
@@ -137,6 +158,7 @@ class World():
     def draw(self):
         for tile in self.tile_list:
             screen.blit(tile[0], tile[1])
+            pygame.draw.rect(screen, (255,255,255), tile[1], 2)
 
 world_data = [
 [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 
