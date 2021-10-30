@@ -11,6 +11,7 @@ fps = 60
 screen_width = 1000
 screen_height = 1000
 game_over = 0
+main_menu = True
 
 screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption('Platformer')
@@ -22,6 +23,8 @@ tile_size = 50
 sun_img = pygame.image.load('img/sun.png')
 bg_img = pygame.image.load('img/sky.png')
 restart_image = pygame.image.load('img/restart_btn.png')
+start_image = pygame.image.load('img/start_btn.png')
+exit_image = pygame.image.load('img/exit_btn.png')
 
 # Class definen
 ## ___init___ => is de constructur v/d classe
@@ -263,7 +266,8 @@ player = Player(100, screen_height - 130)
 sprite_group = pygame.sprite.Group()
 world = World(world_data)
 restart_button = Button(screen_width // 2 - 50, screen_height // 2 - 15, restart_image)
-
+start_button = Button(screen_width // 2 - 350, screen_height // 2, start_image)
+exit_button = Button(screen_width // 2 + 150, screen_height // 2, exit_image)
 #import database connection file (objecten etc)
 import sqlconnection
 
@@ -276,19 +280,24 @@ while run:
 
     screen.blit(bg_img, (0, 0))
     screen.blit(sun_img, (100, 100))
-    
-    world.draw()
-    if game_over == 0:
-        sprite_group.update()
+    if main_menu == True:
+      if start_button.draw():
+          main_menu = False     
+      if exit_button.draw():
+          run = False
+    else:
+        world.draw()
+        if game_over == 0:
+            sprite_group.update()
 
-    sprite_group.draw(screen)
-     
-    game_over = player.update(game_over)
+        sprite_group.draw(screen)
+        
+        game_over = player.update(game_over)
 
-    if game_over == -1:
-      if restart_button.draw(): #tekent EN return de actie van de button (clicked of niet)
-        player.reset(100, screen_height - 130)
-        game_over = 0
+        if game_over == -1:
+            if restart_button.draw(): #tekent EN return de actie van de button (clicked of niet)
+                player.reset(100, screen_height - 130)
+                game_over = 0
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
