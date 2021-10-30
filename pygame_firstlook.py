@@ -142,6 +142,17 @@ class Enemy(pygame.sprite.Sprite):
         if abs(self.move_counter) > 50:
             self.move_direction *= -1
             self.move_counter = 0
+
+
+class Lava(pygame.sprite.Sprite):
+     def __init__(self,x, y):
+        pygame.sprite.Sprite.__init__(self)
+        img = pygame.image.load('img/lava.png')
+        self.image = pygame.transform.scale(img, (tile_size,tile_size // 2))
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+
 class World():
     def __init__(self, data): 
         self.tile_list = []
@@ -170,7 +181,10 @@ class World():
                     self.tile_list.append(tile)
                 if tile == 3:
                     blob = Enemy(col_count * tile_size, row_count * tile_size + 15)
-                    blob_group.add(blob)
+                    sprite_group.add(blob)
+                if tile == 6:
+                    lava = Lava(col_count * tile_size, row_count * tile_size + 25)
+                    sprite_group.add(lava)
                 col_count += 1
             row_count += 1
 
@@ -204,7 +218,7 @@ world_data = [
 
 
 player = Player(100, screen_height - 130)
-blob_group = pygame.sprite.Group()
+sprite_group = pygame.sprite.Group()
 world = World(world_data)
 
 #import database connection file (objecten etc)
@@ -221,8 +235,8 @@ while run:
     screen.blit(sun_img, (100, 100))
 
     world.draw()
-    blob_group.update()
-    blob_group.draw(screen)
+    sprite_group.update()
+    sprite_group.draw(screen)
      
     player.update()
     for event in pygame.event.get():
