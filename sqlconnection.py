@@ -12,3 +12,10 @@ def printScoreboard():
     for i in cursor:
       print(i)
 
+def CreateUser(name):
+    sql_string = f"INSERT INTO Users (name) OUTPUT Inserted.Id VALUES('{name}');"
+    print(sql_string)
+    cursor.execute(sql_string)
+    conn.commit() 
+    return cursor
+

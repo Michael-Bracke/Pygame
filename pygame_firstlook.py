@@ -1,8 +1,12 @@
+import pygame_textinput
 import pygame
 import pickle
+
+
 from os import path
 
 from pygame import image
+from pygame import draw
 from pygame.event import pump
 from pygame.locals import *
 
@@ -20,6 +24,7 @@ pygame.display.set_caption('Platformer')
 
 #define fonts
 font_score = pygame.font.SysFont('Bauhaus 93', 30)
+font = pygame.font.SysFont('Bauhaus 93', 70)
 
 
 #define colours
@@ -30,9 +35,10 @@ blue = (0, 0, 255)
 tile_size = 50
 game_over = 0
 main_menu = True
+Login_menu = True
 level = 0
 max_levels = 7
-
+user_id = 0
 #load images
 sun_img = pygame.image.load('img/sun.png')
 bg_img = pygame.image.load('img/sky.png')
@@ -61,6 +67,31 @@ def reset_level(level):
 ## ___init___ => is de constructur v/d classe
 # door self.xxx te gebruiker en toe te wijzen wordt er automatisch ook een variabele aangemaakt
 class Button():
+    def __init__(self, x, y, image):
+        self.image = image
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.clicked = False
+    def draw(self):
+        action = False
+        #krijg muis positie
+        pos = pygame.mouse.get_pos()
+
+        #check muispunt collsion
+        if self.rect.collidepoint(pos):
+            if pygame.mouse.get_pressed()[0] == 1 and self.clicked == False: #linker muisknop INGEDRUKT
+                action = True
+                self.clicked = True
+
+        if pygame.mouse.get_pressed()[0] == 0: #linker muisknop LOSGELATEN
+            self.clicked = False
+
+        #de button zelf plaatsen
+        screen.blit(self.image, self.rect)
+        return action
+
+class TextBox():
     def __init__(self, x, y, image):
         self.image = image
         self.rect = self.image.get_rect()
@@ -172,11 +203,14 @@ class Player():
             if pygame.sprite.spritecollide(self, exit_group, False):
                 game_over = 1 #NEXT LEVEL
 
+            
 
             self.rect.x += dx
             self.rect.y += dy
 
         elif game_over == -1:
+                #toon gameover wanneer player dood is
+                draw_text('GAME OVER!', font, blue, (screen_width // 2) - 200, screen_height // 2)
                 self.image = self.dead_image
                 if self.rect.y > 200:
                     self.rect.y -= 5
@@ -308,6 +342,12 @@ coin_group = pygame.sprite.Group()
 restart_button = Button(screen_width // 2 - 50, screen_height // 2 - 15, restart_image)
 start_button = Button(screen_width // 2 - 350, screen_height // 2, start_image)
 exit_button = Button(screen_width // 2 + 150, screen_height // 2, exit_image)
+login_entered_button = Button(screen_width // 2 - 150, screen_height // 2 + 150, start_image)
+
+# Create TextInput-object
+textinput = pygame_textinput.TextInputVisualizer()
+
+
 #import database connection file (objecten etc)
 import sqlconnection
 
@@ -329,50 +369,62 @@ while run:
       if exit_button.draw():
           run = False
     else:
-        world.draw()
-        if game_over == 0:
+        if Login_menu == True:      
+            draw_text('Naam speler: ', font, blue, (screen_width // 2) - 215 , (screen_height // 2) - 200)    
+            # toon de textinput op het scherm
+            screen.blit(textinput.surface, ((screen_height // 2) - 75, (screen_height // 2)))
+            if login_entered_button.draw() or (event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN):
+                user_id = sqlconnection.CreateUser(textinput.value)
+                Login_menu = False
+        else:
+            world.draw()
+            if game_over == 0:
 
-            sprite_group.update()
-            #score counter          
-            if pygame.sprite.spritecollide(player, coin_group, True):
-                score += 1
-            draw_text('X ' + str(score), font_score, white, tile_size - 10, 10)
+                sprite_group.update()
+                #score counter          
+                if pygame.sprite.spritecollide(player, coin_group, True):
+                    score += 1
+                draw_text('X ' + str(score), font_score, white, tile_size - 10, 10)
 
-        sprite_group.draw(screen)
-        exit_group.draw(screen)
-        coin_group.draw(screen)
+            sprite_group.draw(screen)
+            exit_group.draw(screen)
+            coin_group.draw(screen)
 
-        game_over = player.update(game_over, level)
+            game_over = player.update(game_over, level)
 
-        if game_over == -1:
-            if restart_button.draw(): #tekent EN return de actie van de button (clicked of niet)
-                world_data = []
-                world = reset_level(level)
-                game_over = 0
-                score = 0
-
-        if game_over == 1:       
-            level += 1
-            if level <= max_levels:
-                #reset het level
-                world_data = []
-                world = reset_level(level)
-                game_over = 0
-            else:
-                #einde van het spel, boven level 7
-                #toon restart button
+            if game_over == -1:
                 if restart_button.draw(): #tekent EN return de actie van de button (clicked of niet)
-                    level = 0
                     world_data = []
                     world = reset_level(level)
                     game_over = 0
                     score = 0
 
+            if game_over == 1:       
+                level += 1
+                if level <= max_levels:
+                    #reset het level
+                    world_data = []
+                    world = reset_level(level)
+                    game_over = 0
+                else:
+                    #einde van het spel, boven level 7
+                    #toon restart button
+                    draw_text('YOU WIN!', font, blue, (screen_width // 2) - 140, screen_height // 2)
+                    if restart_button.draw(): #tekent EN return de actie van de button (clicked of niet)
+                        level = 0
+                        world_data = []
+                        world = reset_level(level)
+                        game_over = 0
+                        score = 0
 
 
 
 
-    for event in pygame.event.get():
+    events = pygame.event.get()
+    # Feed it with events every frame
+    textinput.update(events)
+    for event in events:
+        
         if event.type == pygame.QUIT:
             run = False
 
