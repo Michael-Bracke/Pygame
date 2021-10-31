@@ -28,12 +28,12 @@ pygame.display.set_caption('Platformer')
 #define fonts
 font_score = pygame.font.SysFont('Bauhaus 93', 30)
 font = pygame.font.SysFont('Bauhaus 93', 70)
-
+font_download = pygame.font.SysFont('Bauhaus 93', 25)
 
 #define colours
 white = (255, 255, 255)
 blue = (0, 0, 255)
-
+black = (0,0,0)
 #define game variables
 tile_size = 50
 game_over = 0
@@ -181,6 +181,7 @@ class Player():
         walk_cooldown = 7
         dx = 0
         dy = 0
+        col_thresh = 20
         if game_over == 0:
             
 
@@ -260,7 +261,25 @@ class Player():
             if pygame.sprite.spritecollide(self, exit_group, False):
                 game_over = 1 #NEXT LEVEL
 
-            
+            #check for collision with platforms
+            for platform in platform_group:
+                #collision in the x direction
+                if platform.rect.colliderect(self.rect.x + dx, self.rect.y, self.width, self.height):
+                    dx = 0
+                #collision in the y direction
+                if platform.rect.colliderect(self.rect.x, self.rect.y + dy, self.width, self.height):
+                    #check if below platform
+                    if abs((self.rect.top + dy) - platform.rect.bottom) < col_thresh:
+                        self.vel_y = 0
+                        dy = platform.rect.bottom - self.rect.top
+                    #check if above platform
+                    elif abs((self.rect.bottom + dy) - platform.rect.top) < col_thresh:
+                        self.rect.bottom = platform.rect.top - 1
+                        self.is_on_platform = False
+                        dy = 0
+                    #move sideways with the platform
+                    if platform.move_x != 0:
+                        self.rect.x += platform.move_direction
 
             self.rect.x += dx
             self.rect.y += dy
@@ -407,7 +426,7 @@ restart_button = Button(screen_width // 2 - 50, screen_height // 2 - 15, restart
 start_button = Button(screen_width // 2 - 350, screen_height // 2, start_image)
 exit_button = Button(screen_width // 2 + 150, screen_height // 2, exit_image)
 login_entered_button = Button(screen_width // 2 - 150, screen_height // 2 + 150, start_image)
-download_csv_button = Button(screen_width // 2 - 20, screen_height // 2 + 150, download_image)
+download_csv_button = Button(screen_width // 2 + 100, screen_height // 2 + 150, pygame.transform.scale(download_image, (40,40)))
 # Create TextInput-object
 textinput = pygame_textinput.TextInputVisualizer()
 
@@ -455,11 +474,11 @@ while run:
             exit_group.draw(screen)
             coin_group.draw(screen)
             platform_group.draw(screen)
-            
+
             game_over = player.update(game_over, level)
 
             if game_over == -1:
-                draw_text('SCORE: ' + str(score), font, blue, (screen_width // 2) - 150 , (screen_height // 2) - 200)    
+                draw_text('SCORE: ' + str(score), font, blue, (screen_width // 2) - 150 , (screen_height // 2) - 100)    
                 if score_updated == False:
                     
                     #bereken de tijd dat de speler gespeeld heeft dit level
@@ -469,6 +488,7 @@ while run:
                     sqlconnection.UpdateScoreboard(user_id, score, time_elapsed)
                     score_updated = True
                 draw_leaderbord()
+                draw_text('download leaderboard', font_download, black, (screen_width // 2) - 150 , (screen_height // 2) + 150)
                 if download_csv_button.draw():
                         draw_leaderboard_csv()
                 if restart_button.draw(): #tekent EN return de actie van de button (clicked of niet)
@@ -494,7 +514,7 @@ while run:
                         now = pygame.time.get_ticks()
                         time_elapsed = now - player.last_game_ended
                         player.last_game_ended = now
-                        sqlconnection.UpdateScoreboard(user_id, score, time_elapsqed)
+                        sqlconnection.UpdateScoreboard(user_id, score, time_elapsed)
                         score_updated = True
                     if restart_button.draw(): #tekent EN return de actie van de button (clicked of niet)
                         level = 0
