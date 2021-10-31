@@ -19,6 +19,9 @@ screen_width = 1000
 screen_height = 1000
 score = 0
 
+total_time = 0
+elapsed_time = 0
+
 screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption('Platformer')
 
@@ -227,6 +230,7 @@ class Player():
         self.images_left = []
         self.image_index = 0
         self.counter = 0
+        self.last_game_ended = 0
         
         for num in range(1,5):
             img_right = pygame.image.load(f'img/guy{num}.png')
@@ -363,8 +367,9 @@ world = reset_level(level)
     
 run = True
 while run:
-    clock.tick(fps)
 
+
+    clock.tick(fps)
     screen.blit(bg_img, (0, 0))
     screen.blit(sun_img, (100, 100))
     if main_menu == True:
@@ -399,7 +404,11 @@ while run:
             if game_over == -1:
                 draw_text('SCORE: ' + str(score), font, blue, (screen_width // 2) - 150 , (screen_height // 2) - 200)    
                 if score_updated == False:
-                    sqlconnection.UpdateScoreboard(user_id, score)
+                    #bereken de tijd dat de speler gespeeld heeft dit level
+                    now = pygame.time.get_ticks()
+                    time_elapsed = now - player.last_game_ended
+                    player.last_game_ended = now
+                    sqlconnection.UpdateScoreboard(user_id, score, time_elapsed)
                     score_updated = True
                 if restart_button.draw(): #tekent EN return de actie van de button (clicked of niet)
                     world_data = []
@@ -420,7 +429,11 @@ while run:
                     #toon restart button
                     draw_text('YOU WIN!', font, blue, (screen_width // 2) - 140, screen_height // 2)
                     if score_updated == False:
-                        sqlconnection.UpdateScoreboard(user_id, score)
+                        #bereken de tijd dat de speler gespeeld heeft dit level
+                        now = pygame.time.get_ticks()
+                        time_elapsed = now - player.last_game_ended
+                        player.last_game_ended = now
+                        sqlconnection.UpdateScoreboard(user_id, score, time_elapsed)
                         score_updated = True
                     if restart_button.draw(): #tekent EN return de actie van de button (clicked of niet)
                         level = 0
