@@ -13,10 +13,18 @@ fps = 60
 
 screen_width = 1000
 screen_height = 1000
-
+score = 0
 
 screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption('Platformer')
+
+#define fonts
+font_score = pygame.font.SysFont('Bauhaus 93', 30)
+
+
+#define colours
+white = (255, 255, 255)
+blue = (0, 0, 255)
 
 #define game variables
 tile_size = 50
@@ -33,11 +41,15 @@ start_image = pygame.image.load('img/start_btn.png')
 exit_image = pygame.image.load('img/exit_btn.png')
 
 #functies
+def draw_text(text, font, text_color, x, y):
+    img = font.render(text, True, text_color)
+    screen.blit(img,(x, y))
 
 def reset_level(level):
     player.reset(100,screen_height - 130)
     sprite_group.empty()
     exit_group.empty()
+    coin_group.empty()
     #het inladen van de data (dynamisch)
     if path.exists(f'level{level}_data'):
         pickle_in = open(f'level{level}_data', 'rb')
@@ -154,6 +166,8 @@ class Player():
             if pygame.sprite.spritecollide(self, sprite_group, False):
                 game_over = -1 #DEAD
 
+
+
             #controle voor het deurtje naar volgende level
             if pygame.sprite.spritecollide(self, exit_group, False):
                 game_over = 1 #NEXT LEVEL
@@ -230,6 +244,14 @@ class Lava(pygame.sprite.Sprite):
         self.rect.x = x
         self.rect.y = y
 
+class Coin(pygame.sprite.Sprite):
+     def __init__(self,x, y):
+        pygame.sprite.Sprite.__init__(self)
+        img = pygame.image.load('img/coin.png')
+        self.image = pygame.transform.scale(img, (tile_size,tile_size // 2))
+        self.rect = self.image.get_rect()
+        self.rect.center = (x, y)
+
 class World():
     def __init__(self, data): 
         self.tile_list = []
@@ -262,6 +284,9 @@ class World():
                 if tile == 6:
                     lava = Lava(col_count * tile_size, row_count * tile_size + 25)
                     sprite_group.add(lava)
+                if tile == 7:
+                    coin = Coin(col_count * tile_size + (tile_size // 2), row_count * tile_size + (tile_size // 2))
+                    coin_group.add(coin)
                 if tile == 8:
                     exit = Exit(col_count * tile_size, row_count * tile_size - 20)
                     exit_group.add(exit)
@@ -277,7 +302,7 @@ class World():
 player = Player(100, screen_height - 130)
 sprite_group = pygame.sprite.Group()
 exit_group = pygame.sprite.Group()
-
+coin_group = pygame.sprite.Group()
 
 
 restart_button = Button(screen_width // 2 - 50, screen_height // 2 - 15, restart_image)
@@ -306,10 +331,16 @@ while run:
     else:
         world.draw()
         if game_over == 0:
+
             sprite_group.update()
+            #score counter          
+            if pygame.sprite.spritecollide(player, coin_group, True):
+                score += 1
+            draw_text('X ' + str(score), font_score, white, tile_size - 10, 10)
 
         sprite_group.draw(screen)
         exit_group.draw(screen)
+        coin_group.draw(screen)
 
         game_over = player.update(game_over, level)
 
@@ -318,6 +349,7 @@ while run:
                 world_data = []
                 world = reset_level(level)
                 game_over = 0
+                score = 0
 
         if game_over == 1:       
             level += 1
@@ -334,6 +366,7 @@ while run:
                     world_data = []
                     world = reset_level(level)
                     game_over = 0
+                    score = 0
 
 
 
