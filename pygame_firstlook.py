@@ -92,9 +92,36 @@ def reset_level(level):
         world = World(world_data)
     return world
 
+
+
 # Class definen
 ## ___init___ => is de constructur v/d classe
 # door self.xxx te gebruiker en toe te wijzen wordt er automatisch ook een variabele aangemaakt
+
+
+class Platform(pygame.sprite.Sprite):
+    def __init__(self, x, y, move_x, move_y):
+        pygame.sprite.Sprite.__init__(self)
+        img = pygame.image.load('img/platform.png')
+        self.image = pygame.transform.scale(img, (tile_size, tile_size // 2))
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.move_counter = 0
+        self.move_direction = 1
+        self.move_x = move_x
+        self.move_y = move_y
+
+
+    def update(self):
+        self.rect.x += self.move_direction * self.move_x
+        self.rect.y += self.move_direction * self.move_y
+        self.move_counter += 1
+        if abs(self.move_counter) > 50:
+            self.move_direction *= -1
+            self.move_counter *= -1
+
+
 class Button():
     def __init__(self, x, y, image):
         self.image = image
@@ -346,6 +373,12 @@ class World():
                 if tile == 3:
                     blob = Enemy(col_count * tile_size, row_count * tile_size + 15)
                     sprite_group.add(blob)
+                if tile == 4:
+                    platform = Platform(col_count * tile_size, row_count * tile_size, 1, 0)
+                    platform_group.add(platform)
+                if tile == 5:
+                    platform = Platform(col_count * tile_size, row_count * tile_size, 0, 1)
+                    platform_group.add(platform)
                 if tile == 6:
                     lava = Lava(col_count * tile_size, row_count * tile_size + 25)
                     sprite_group.add(lava)
@@ -368,7 +401,7 @@ player = Player(100, screen_height - 130)
 sprite_group = pygame.sprite.Group()
 exit_group = pygame.sprite.Group()
 coin_group = pygame.sprite.Group()
-
+platform_group = pygame.sprite.Group()
 
 restart_button = Button(screen_width // 2 - 50, screen_height // 2 - 15, restart_image)
 start_button = Button(screen_width // 2 - 350, screen_height // 2, start_image)
@@ -411,7 +444,7 @@ while run:
         else:
             world.draw()
             if game_over == 0:
-
+                platform_group.update()
                 sprite_group.update()
                 #score counter          
                 if pygame.sprite.spritecollide(player, coin_group, True):
@@ -421,7 +454,8 @@ while run:
             sprite_group.draw(screen)
             exit_group.draw(screen)
             coin_group.draw(screen)
-
+            platform_group.draw(screen)
+            
             game_over = player.update(game_over, level)
 
             if game_over == -1:
