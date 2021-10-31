@@ -2,6 +2,8 @@ import pygame_textinput
 import pygame
 import pickle
 import csv  
+import random
+import string
 
 from os import path
 
@@ -34,16 +36,19 @@ font_download = pygame.font.SysFont('Bauhaus 93', 25)
 white = (255, 255, 255)
 blue = (0, 0, 255)
 black = (0,0,0)
+red = (255, 0, 0)
+
 #define game variables
 tile_size = 50
 game_over = 0
 main_menu = True
 Login_menu = True
+reeds_account = False
 level = 0
 max_levels = 7
 user_id = 0
 score_updated = False
-
+secret_key = ""
 
 
 #load images
@@ -53,9 +58,14 @@ restart_image = pygame.image.load('img/restart_btn.png')
 start_image = pygame.image.load('img/start_btn.png')
 exit_image = pygame.image.load('img/exit_btn.png')
 download_image = pygame.image.load('img/download_btn.png')
-
+account_image = pygame.image.load('img/account.png')
 #functies
 
+def get_random_string(length):
+    # choose from all lowercase letter
+    letters = string.ascii_lowercase
+    result_str = ''.join(random.choice(letters) for i in range(length))
+    return result_str
 
 def draw_leaderboard_csv():
     header = ['Name', 'Score', 'Time Elapsed']
@@ -427,8 +437,11 @@ start_button = Button(screen_width // 2 - 350, screen_height // 2, start_image)
 exit_button = Button(screen_width // 2 + 150, screen_height // 2, exit_image)
 login_entered_button = Button(screen_width // 2 - 150, screen_height // 2 + 150, start_image)
 download_csv_button = Button(screen_width // 2 + 100, screen_height // 2 + 150, pygame.transform.scale(download_image, (40,40)))
+reeds_account_btn = Button(screen_width // 2 - 100, screen_height // 2 + 50, pygame.transform.scale(account_image, (40,40)))
+
 # Create TextInput-object
 textinput = pygame_textinput.TextInputVisualizer()
+textinput_secret = pygame_textinput.TextInputVisualizer()
 
 
 #import database connection file (objecten etc)
@@ -441,8 +454,6 @@ world = reset_level(level)
     
 run = True
 while run:
-
-
     clock.tick(fps)
     screen.blit(bg_img, (0, 0))
     screen.blit(sun_img, (100, 100))
@@ -455,74 +466,96 @@ while run:
     else:
         if Login_menu == True:      
             draw_text('Naam speler: ', font, blue, (screen_width // 2) - 215 , (screen_height // 2) - 200)    
+            draw_text('Inloggen', font_score, black, (screen_width // 2) - 50 , (screen_height // 2) + 50)   
             # toon de textinput op het scherm
             screen.blit(textinput.surface, ((screen_height // 2) - 75, (screen_height // 2)))
             if login_entered_button.draw() or (event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN):
-                user_id = sqlconnection.CreateUser(textinput.value)
+                secret_key = get_random_string(8)
+                print("SECRET KEY")
+                user_id = sqlconnection.CreateUser(textinput.value, secret_key)
                 Login_menu = False
+
+            if reeds_account_btn.draw():
+                reeds_account = True
+                Login_menu = False
+
+        if reeds_account == True:
+            draw_text('Geheime code: ', font, blue, (screen_width // 2) - 215 , (screen_height // 2) - 200)    
+                    # toon de textinput op het scherm
+            screen.blit(textinput_secret.surface, ((screen_height // 2) - 75, (screen_height // 2)))
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
+                input_secret = textinput_secret.value
+                user_id = sqlconnection.GetUser(input_secret)
+                if user_id == 0:
+                     draw_text('Verkeerde code', font_score, red, (screen_width // 2) - 100 , (screen_height // 2) + 100)  
+                else:   
+                    secret_key = input_secret
+                    Login_menu = False
+                    reeds_account = False
         else:
-            world.draw()
-            if game_over == 0:
-                platform_group.update()
-                sprite_group.update()
-                #score counter          
-                if pygame.sprite.spritecollide(player, coin_group, True):
-                    score += 1
-                draw_text('X ' + str(score), font_score, white, tile_size - 10, 10)
+            if Login_menu == False and reeds_account == False:
+                world.draw()
+                if game_over == 0:
+                    platform_group.update()
+                    sprite_group.update()
+                    #score counter          
+                    if pygame.sprite.spritecollide(player, coin_group, True):
+                        score += 1
+                    draw_text('X ' + str(score), font_score, white, tile_size - 10, 10)
 
-            sprite_group.draw(screen)
-            exit_group.draw(screen)
-            coin_group.draw(screen)
-            platform_group.draw(screen)
+                sprite_group.draw(screen)
+                exit_group.draw(screen)
+                coin_group.draw(screen)
+                platform_group.draw(screen)
 
-            game_over = player.update(game_over, level)
+                game_over = player.update(game_over, level)
 
-            if game_over == -1:
-                draw_text('SCORE: ' + str(score), font, blue, (screen_width // 2) - 150 , (screen_height // 2) - 100)    
-                if score_updated == False:
-                    
-                    #bereken de tijd dat de speler gespeeld heeft dit level
-                    now = pygame.time.get_ticks()
-                    time_elapsed = now - player.last_game_ended
-                    player.last_game_ended = now
-                    sqlconnection.UpdateScoreboard(user_id, score, time_elapsed)
-                    score_updated = True
-                draw_leaderbord()
-                draw_text('download leaderboard', font_download, black, (screen_width // 2) - 150 , (screen_height // 2) + 150)
-                if download_csv_button.draw():
-                        draw_leaderboard_csv()
-                if restart_button.draw(): #tekent EN return de actie van de button (clicked of niet)
-                    world_data = []
-                    world = reset_level(level)
-                    game_over = 0
-                    score = 0
-                    score_updated = False
-
-            if game_over == 1:       
-                level += 1
-                if level <= max_levels:
-                    #reset het level
-                    world_data = []
-                    world = reset_level(level)
-                    game_over = 0
-                else:
-                    #einde van het spel, boven level 7
-                    #toon restart button
-                    draw_text('YOU WIN!', font, blue, (screen_width // 2) - 140, screen_height // 2)
+                if game_over == -1:
+                    draw_text('SCORE: ' + str(score) + ' SECRET KEY: ' + str(secret_key), font_score, blue, (screen_width // 2) - 200 , (screen_height // 2) - 100)    
                     if score_updated == False:
+                        
                         #bereken de tijd dat de speler gespeeld heeft dit level
                         now = pygame.time.get_ticks()
                         time_elapsed = now - player.last_game_ended
                         player.last_game_ended = now
                         sqlconnection.UpdateScoreboard(user_id, score, time_elapsed)
                         score_updated = True
+                    draw_leaderbord()
+                    draw_text('download leaderboard', font_download, black, (screen_width // 2) - 150 , (screen_height // 2) + 150)
+                    if download_csv_button.draw():
+                            draw_leaderboard_csv()
                     if restart_button.draw(): #tekent EN return de actie van de button (clicked of niet)
-                        level = 0
+                        world_data = []
+                        world = reset_level(0)
+                        game_over = 0
+                        score = 0
+                        score_updated = False
+
+                if game_over == 1:       
+                    level += 1
+                    if level <= max_levels:
+                        #reset het level
                         world_data = []
                         world = reset_level(level)
                         game_over = 0
-                        score_updated == False
-                        score = 0
+                    else:
+                        #einde van het spel, boven level 7
+                        #toon restart button
+                        draw_text('YOU WIN!', font, blue, (screen_width // 2) - 140, screen_height // 2)
+                        if score_updated == False:
+                            #bereken de tijd dat de speler gespeeld heeft dit level
+                            now = pygame.time.get_ticks()
+                            time_elapsed = now - player.last_game_ended
+                            player.last_game_ended = now
+                            sqlconnection.UpdateScoreboard(user_id, score, time_elapsed)
+                            score_updated = True
+                        if restart_button.draw(): #tekent EN return de actie van de button (clicked of niet)
+                            level = 0
+                            world_data = []
+                            world = reset_level(0)
+                            game_over = 0
+                            score_updated == False
+                            score = 0
 
 
 
@@ -530,6 +563,7 @@ while run:
     events = pygame.event.get()
     # Feed it with events every frame
     textinput.update(events)
+    textinput_secret.update(events)
     for event in events:
         
         if event.type == pygame.QUIT:
