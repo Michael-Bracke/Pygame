@@ -39,6 +39,10 @@ Login_menu = True
 level = 0
 max_levels = 7
 user_id = 0
+score_updated = False
+
+
+
 #load images
 sun_img = pygame.image.load('img/sun.png')
 bg_img = pygame.image.load('img/sky.png')
@@ -210,7 +214,7 @@ class Player():
 
         elif game_over == -1:
                 #toon gameover wanneer player dood is
-                draw_text('GAME OVER!', font, blue, (screen_width // 2) - 200, screen_height // 2)
+                draw_text('GAME OVER!', font, blue, (screen_width // 2) - 185, (screen_height // 2) + 50)
                 self.image = self.dead_image
                 if self.rect.y > 200:
                     self.rect.y -= 5
@@ -393,11 +397,16 @@ while run:
             game_over = player.update(game_over, level)
 
             if game_over == -1:
+                draw_text('SCORE: ' + str(score), font, blue, (screen_width // 2) - 150 , (screen_height // 2) - 200)    
+                if score_updated == False:
+                    sqlconnection.UpdateScoreboard(user_id, score)
+                    score_updated = True
                 if restart_button.draw(): #tekent EN return de actie van de button (clicked of niet)
                     world_data = []
                     world = reset_level(level)
                     game_over = 0
                     score = 0
+                    score_updated = False
 
             if game_over == 1:       
                 level += 1
@@ -410,11 +419,15 @@ while run:
                     #einde van het spel, boven level 7
                     #toon restart button
                     draw_text('YOU WIN!', font, blue, (screen_width // 2) - 140, screen_height // 2)
+                    if score_updated == False:
+                        sqlconnection.UpdateScoreboard(user_id, score)
+                        score_updated = True
                     if restart_button.draw(): #tekent EN return de actie van de button (clicked of niet)
                         level = 0
                         world_data = []
                         world = reset_level(level)
                         game_over = 0
+                        score_updated == False
                         score = 0
 
 
