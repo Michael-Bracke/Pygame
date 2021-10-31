@@ -7,11 +7,6 @@ conn = pyodbc.connect('Driver={SQL Server};'
 
 cursor = conn.cursor()
 
-def printScoreboard():
-    cursor.execute('SELECT * FROM Scoreboard')
-    for i in cursor:
-      print(i)
-
 def CreateUser(name):
     sql_string = f"INSERT INTO Users (name) OUTPUT Inserted.Id VALUES('{name}');"
     print(sql_string)
@@ -30,4 +25,7 @@ def UpdateScoreboard(user_id, score, time):
     conn.commit() 
 
 def GetLeaderboard():
-    sql_string = f"Select * FROM Scoreboard"
+    sql_string = f"Select top (5) [Name], [Score], [TimeToComplete]  FROM Scoreboard s INNER JOIN Users u ON u.Id = s.UserId ORDER BY Score DESC, TimeToComplete ASC"
+    cursor.execute(sql_string)
+    return cursor
+

@@ -1,7 +1,7 @@
 import pygame_textinput
 import pygame
 import pickle
-
+import csv  
 
 from os import path
 
@@ -52,11 +52,33 @@ bg_img = pygame.image.load('img/sky.png')
 restart_image = pygame.image.load('img/restart_btn.png')
 start_image = pygame.image.load('img/start_btn.png')
 exit_image = pygame.image.load('img/exit_btn.png')
+download_image = pygame.image.load('img/download_btn.png')
 
 #functies
+
+
+def draw_leaderboard_csv():
+    header = ['Name', 'Score', 'Time Elapsed']
+    data = sqlconnection.GetLeaderboard()
+    with open('countries.csv', 'w', encoding='UTF8') as f:
+        writer = csv.writer(f)
+        # write the header
+        writer.writerow(header)
+        # write the data
+        writer.writerow(data)
+
 def draw_text(text, font, text_color, x, y):
     img = font.render(text, True, text_color)
     screen.blit(img,(x, y))
+
+def draw_leaderbord():
+    leaderboard_y_value = 0
+    data = sqlconnection.GetLeaderboard()
+    draw_text("Leaderbord (Top 5): ", font, blue, (screen_width // 2) - 300, (screen_height // 2) - 450)
+    for value in data:
+        time = (value[0] + " | Score: " + str(value[1]) + " - "  + str(value[2]))      
+        leaderboard_y_value += 50
+        draw_text(time, font_score, blue, (screen_width // 2) - 250 , ((screen_height // 2) - 400) +  leaderboard_y_value)
 
 def reset_level(level):
     player.reset(100,screen_height - 130)
@@ -125,6 +147,7 @@ class TextBox():
 
 class Player():
     def __init__(self, x, y):
+        self.last_game_ended = 0
         self.reset(x, y)
 
     def update(self, game_over, level):
@@ -230,7 +253,7 @@ class Player():
         self.images_left = []
         self.image_index = 0
         self.counter = 0
-        self.last_game_ended = 0
+        
         
         for num in range(1,5):
             img_right = pygame.image.load(f'img/guy{num}.png')
@@ -351,7 +374,7 @@ restart_button = Button(screen_width // 2 - 50, screen_height // 2 - 15, restart
 start_button = Button(screen_width // 2 - 350, screen_height // 2, start_image)
 exit_button = Button(screen_width // 2 + 150, screen_height // 2, exit_image)
 login_entered_button = Button(screen_width // 2 - 150, screen_height // 2 + 150, start_image)
-
+download_csv_button = Button(screen_width // 2 - 20, screen_height // 2 + 150, download_image)
 # Create TextInput-object
 textinput = pygame_textinput.TextInputVisualizer()
 
@@ -359,7 +382,6 @@ textinput = pygame_textinput.TextInputVisualizer()
 #import database connection file (objecten etc)
 import sqlconnection
 
-sqlconnection.printScoreboard()
 
 world = reset_level(level)
 
@@ -373,6 +395,7 @@ while run:
     screen.blit(bg_img, (0, 0))
     screen.blit(sun_img, (100, 100))
     if main_menu == True:
+      draw_leaderbord()
       if start_button.draw():
           main_menu = False     
       if exit_button.draw():
@@ -404,12 +427,16 @@ while run:
             if game_over == -1:
                 draw_text('SCORE: ' + str(score), font, blue, (screen_width // 2) - 150 , (screen_height // 2) - 200)    
                 if score_updated == False:
+                    
                     #bereken de tijd dat de speler gespeeld heeft dit level
                     now = pygame.time.get_ticks()
                     time_elapsed = now - player.last_game_ended
                     player.last_game_ended = now
                     sqlconnection.UpdateScoreboard(user_id, score, time_elapsed)
                     score_updated = True
+                draw_leaderbord()
+                if download_csv_button.draw():
+                        draw_leaderboard_csv()
                 if restart_button.draw(): #tekent EN return de actie van de button (clicked of niet)
                     world_data = []
                     world = reset_level(level)
@@ -433,7 +460,7 @@ while run:
                         now = pygame.time.get_ticks()
                         time_elapsed = now - player.last_game_ended
                         player.last_game_ended = now
-                        sqlconnection.UpdateScoreboard(user_id, score, time_elapsed)
+                        sqlconnection.UpdateScoreboard(user_id, score, time_elapsqed)
                         score_updated = True
                     if restart_button.draw(): #tekent EN return de actie van de button (clicked of niet)
                         level = 0
